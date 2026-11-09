@@ -1,0 +1,31 @@
+name: sync-sc117-iq3s-to-modelscope
+# 用途：GitHub runner（海外直连 HF，不耗你家 VPN）把 SC117 的 IQ3_S 主权重（只 1 个文件 55 GB）
+#       搬运到你自己的 ModelScope 仓库 → NAS 走国内线拉取。
+# 用法：新建 PUBLIC GitHub 仓库 → Actions 标签 → New workflow 粘贴本文件到
+#       .github/workflows/sync-sc117.yml → Settings → Secrets 加 MS_TOKEN（ModelScope 访问令牌）
+#       → Actions 里 Run workflow。完成后把 ModelScope 仓库 ID 告诉助手。
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ms2hf
+        run: pip install ms2hf
+      - name: Sync only IQ3_S shard 1 (55 GB) from HF to ModelScope
+        env:
+          MS_TOKEN: ${{ secrets.MS_TOKEN }}
+        run: |
+          hf2ms SC117/Qwen3.8-Flash-Next-GSQ-RCO-abliterated-GGUF \
+                citymaster/sc117-abl-iq3s \
+                --repo-type model \
+                --create-target \
+                --include-regex '^IQ3_S/.*00001-of-00002\.gguf$' \
+                --workers 1 \
+                --work-dir /tmp/sync
+        # 注意：把 YOUR_MODELSCOPE_NAME 换成你的 ModelScope 用户名（个人主页 URL 里那个）
